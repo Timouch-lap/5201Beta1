@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Аппарат 5101 — Интерактивная модель</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #0d1117;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: manipulation;
+      color: #e6edf3;
+    }
+
+    model-viewer {
+      width: 100%;
+      height: calc(100% - 90px);
+      background-color: #0d1117;
+    }
+
+    /* Top bar */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: rgba(13,17,23,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      z-index: 50;
+      gap: 10px;
+    }
+    .topbar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .status-badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .status-ok { background: #238636; color: #fff; }
+    .status-warn { background: #9e6a03; color: #fff; }
+    .status-alarm { background: #da3633; color: #fff; }
+
+    /* Bottom buttons */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 90px;
+      background: rgba(13,17,23,0.95);
+      border-top: 1px solid #30363d;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 8px 10px;
+      z-index: 50;
+      gap: 8px;
+    }
+    .elem-btn {
+      flex: 1;
+      max-width: 120px;
+      height: 70px;
+      border-radius: 12px;
+      border: 2px solid #30363d;
+      background: #161b22;
+      color: #e6edf3;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: 0.15s;
+    }
+    .elem-btn:active {
+      transform: scale(0.96);
+    }
+    .elem-btn .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .elem-btn.green { border-color: #3fb950; }
+    .elem-btn.yellow { border-color: #d29922; }
+    .elem-btn.red { border-color: #f85149; }
+
+    /* Card overlay */
+    .card-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 12px;
+    }
+    .card-overlay.visible {
+      display: flex;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 380px;
+      background: #161b22;
+      border-radius: 16px;
+      border: 1px solid #30363d;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      animation: slideUp 0.22s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .card-header {
+      padding: 16px 18px 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-header .dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .card-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .card-close {
+      background: none;
+      border: none;
+      color: #8b949e;
+      font-size: 28px;
+      cursor: pointer;
+      padding: 0 6px;
+      line-height: 1;
+    }
+
+    .card-body {
+      padding: 0 18px 20px;
+    }
+    .value-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .value-label {
+      font-size: 14px;
+      color: #8b949e;
+    }
+    .value-number {
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .value-unit {
+      font-size: 15px;
+      color: #8b949e;
+      margin-left: 4px;
+    }
+
+    .state-text {
+      font-size: 14px;
+      margin: 12px 0 18px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #21262d;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      min-height: 54px;
+    }
+    .action-btn:active { filter: brightness(0.85); }
+    .action-btn.green { background: #238636; }
+    .action-btn.yellow { background: #9e6a03; }
+    .action-btn.red { background: #da3633; }
+    .action-btn.blue { background: #1f6feb; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Аппарат 5101</h1>
+    <div class="status-badge status-ok" id="globalStatus">Норма</div>
+  </div>
+
+  <model-viewer
+    id="model"
+    src="5201_v1.glb"
+    alt="Аппарат 5101"
+    camera-controls
+    touch-action="none"
+    shadow-intensity="1.1"
+    environment-image="neutral"
+    exposure="1"
+    auto-rotate
+    auto-rotate-delay="10000"
+    rotation-per-second="12deg"
+  ></model-viewer>
+
+  <!-- Bottom buttons -->
+  <div class="bottom-bar">
+    <button class="elem-btn green" id="btn-pump" onclick="openCard('pump')">
+      <div class="dot" id="dot-pump" style="background:#3fb950"></div>
+      Насос
+    </button>
+    <button class="elem-btn green" id="btn-valve" onclick="openCard('valve')">
+      <div class="dot" id="dot-valve" style="background:#3fb950"></div>
+      Клапан
+    </button>
+    <button class="elem-btn green" id="btn-sensor" onclick="openCard('sensor')">
+      <div class="dot" id="dot-sensor" style="background:#3fb950"></div>
+      Давление
+    </button>
+  </div>
+
+  <!-- Card -->
+  <div class="card-overlay" id="overlay" onclick="if(event.target===this) closeCard()">
+    <div class="card">
+      <div class="card-header">
+        <div class="dot" id="cardDot"></div>
+        <h2 id="cardTitle">—</h2>
+        <button class="card-close" onclick="closeCard()">×</button>
+      </div>
+      <div class="card-body">
+        <div class="value-row">
+          <span class="value-label" id="cardValueLabel">Значение</span>
+          <div>
+            <span class="value-number" id="cardValue">—</span>
+            <span class="value-unit" id="cardUnit"></span>
+          </div>
+        </div>
+        <div class="state-text" id="cardState">—</div>
+        <button class="action-btn" id="cardAction" onclick="doAction()">—</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const elements = {
+      pump: {
+        name: "Насос подачи",
+        valueLabel: "Производительность",
+        unit: "%",
+        value: 72,
+        state: "ok",
+        running: true,
+        actionLabel: () => elements.pump.running ? "СТОП" : "ПУСК",
+        actionColor: () => elements.pump.running ? "red" : "green",
+        stateText: () => elements.pump.running
+          ? (elements.pump.state === "ok" ? "Работает в норме" :
+             elements.pump.state === "warn" ? "Повышенная нагрузка" : "АВАРИЙНАЯ ОСТАНОВКА")
+          : "Остановлен"
+      },
+      valve: {
+        name: "Клапан на линии",
+        valueLabel: "Открытие",
+        unit: "%",
+        value: 100,
+        state: "ok",
+        open: true,
+        actionLabel: () => elements.valve.open ? "ЗАКРЫТЬ" : "ОТКРЫТЬ",
+        actionColor: () => elements.valve.open ? "yellow" : "blue",
+        stateText: () => elements.valve.open
+          ? (elements.valve.state === "ok" ? "Полностью открыт" :
+             elements.valve.state === "warn" ? "Частично открыт" : "Проблема с клапаном")
+          : "Закрыт"
+      },
+      sensor: {
+        name: "Давление на входе",
+        valueLabel: "Давление",
+        unit: "бар",
+        value: 4.2,
+        state: "ok",
+        actionLabel: () => "СБРОС ТРЕВОГИ",
+        actionColor: () => "blue",
+        stateText: () => {
+          if (elements.sensor.state === "ok") return "Давление в норме";
+          if (elements.sensor.state === "warn") return "Давление повышенное — обратите внимание";
+          return "КРИТИЧЕСКОЕ ДАВЛЕНИЕ!";
+        }
+      }
+    };
+
+    let currentId = null;
+
+    function simulate() {
+      const s = elements.sensor;
+      s.value += (Math.random() - 0.47) * 0.09;
+      s.value = Math.max(2.8, Math.min(8.2, s.value));
+      if (s.value < 5.5) s.state = "ok";
+      else if (s.value < 6.8) s.state = "warn";
+      else s.state = "alarm";
+
+      const p = elements.pump;
+      if (p.running) {
+        p.value += (Math.random() - 0.5) * 1.8;
+        p.value = Math.max(35, Math.min(96, p.value));
+        if (p.value < 80) p.state = "ok";
+        else if (p.value < 90) p.state = "warn";
+        else p.state = "alarm";
+      } else {
+        p.value = Math.max(0, p.value - 3);
+        p.state = "ok";
+      }
+
+      const v = elements.valve;
+      if (v.open) v.value = Math.min(100, v.value + 2.5);
+      else v.value = Math.max(0, v.value - 3.5);
+      if (v.value > 75) v.state = "ok";
+      else if (v.value > 25) v.state = "warn";
+      else v.state = v.open ? "alarm" : "ok";
+
+      updateButtons();
+      updateGlobalStatus();
+      if (currentId) refreshCard();
+    }
+
+    function colorByState(state) {
+      return state === "ok" ? "#3fb950" : state === "warn" ? "#d29922" : "#f85149";
+    }
+
+    function updateButtons() {
+      for (const id of ["pump", "valve", "sensor"]) {
+        const btn = document.getElementById("btn-" + id);
+        const dot = document.getElementById("dot-" + id);
+        const st = elements[id].state;
+        btn.className = "elem-btn " + (st === "ok" ? "green" : st === "warn" ? "yellow" : "red");
+        dot.style.background = colorByState(st);
+      }
+    }
+
+    function updateGlobalStatus() {
+      const badge = document.getElementById("globalStatus");
+      const states = Object.values(elements).map(e => e.state);
+      if (states.includes("alarm")) {
+        badge.textContent = "АВАРИЯ";
+        badge.className = "status-badge status-alarm";
+      } else if (states.includes("warn")) {
+        badge.textContent = "Внимание";
+        badge.className = "status-badge status-warn";
+      } else {
+        badge.textContent = "Норма";
+        badge.className = "status-badge status-ok";
+      }
+    }
+
+    function openCard(id) {
+      currentId = id;
+      refreshCard();
+      document.getElementById("overlay").classList.add("visible");
+    }
+
+    function closeCard() {
+      currentId = null;
+      document.getElementById("overlay").classList.remove("visible");
+    }
+
+    function refreshCard() {
+      const e = elements[currentId];
+      if (!e) return;
+      document.getElementById("cardTitle").textContent = e.name;
+      document.getElementById("cardValueLabel").textContent = e.valueLabel;
+      document.getElementById("cardValue").textContent =
+        (e.value % 1 !== 0) ? e.value.toFixed(1) : Math.round(e.value);
+      document.getElementById("cardUnit").textContent = e.unit;
+      document.getElementById("cardState").textContent = e.stateText();
+      document.getElementById("cardDot").style.background = colorByState(e.state);
+
+      const btn = document.getElementById("cardAction");
+      btn.textContent = e.actionLabel();
+      btn.className = "action-btn " + e.actionColor();
+    }
+
+    function doAction() {
+      const e = elements[currentId];
+      if (!e) return;
+      if (currentId === "pump") e.running = !e.running;
+      else if (currentId === "valve") e.open = !e.open;
+      else if (currentId === "sensor") {
+        e.value = 3.8 + Math.random() * 0.8;
+        e.state = "ok";
+      }
+      refreshCard();
+      updateButtons();
+      updateGlobalStatus();
+    }
+
+    setInterval(simulate, 700);
+    updateButtons();
+    updateGlobalStatus();
+
+    const model = document.getElementById("model");
+    model.addEventListener("interact", () => model.autoRotate = false);
+  </script>
+</body>
+</html>
